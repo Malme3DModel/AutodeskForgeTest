@@ -1,13 +1,13 @@
-# Simple Viewer (Node.js)
+# Viewer React Sample
 
 ![platforms](https://img.shields.io/badge/platform-windows%20%7C%20osx%20%7C%20linux-lightgray.svg)
-[![node.js](https://img.shields.io/badge/Node.js-16.16-blue.svg)](https://nodejs.org)
-[![npm](https://img.shields.io/badge/npm-8.11-blue.svg)](https://www.npmjs.com/)
+[![node.js](https://img.shields.io/badge/Node.js-16.17-blue.svg)](https://nodejs.org)
+[![npm](https://img.shields.io/badge/npm-8.15-blue.svg)](https://www.npmjs.com/)
 [![license](https://img.shields.io/:license-mit-green.svg)](https://opensource.org/licenses/MIT)
 
-[Autodesk Platform Services](https://aps.autodesk.com) application built by following
-the [Simple Viewer](https://tutorials.autodesk.io/tutorials/simple-viewer/) tutorial
-from https://tutorials.autodesk.io.
+> This code sample is referenced by the following blog post: https://aps.autodesk.com/blog/building-simple-react-wrapper-viewer
+
+Simple React application (bootstrapped using [Create React App](https://github.com/facebook/create-react-app)) with the viewer embedded into it using a custom wrapper component.
 
 ![thumbnail](thumbnail.png)
 
@@ -15,45 +15,26 @@ from https://tutorials.autodesk.io.
 
 ### Prerequisites
 
-- [APS credentials](https://forge.autodesk.com/en/docs/oauth/v2/tutorials/create-app)
-- [Node.js](https://nodejs.org) (Long Term Support version is recommended)
-- Command-line terminal such as [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/overview)
-or [bash](https://en.wikipedia.org/wiki/Bash_(Unix_shell)) (should already be available on your system)
+- [Node.js](https://nodejs.org)
+- Terminal (for example, [Windows Command Prompt](https://en.wikipedia.org/wiki/Cmd.exe) or [macOS Terminal](https://support.apple.com/guide/terminal/welcome/mac))
+- To keep things simple, this application does not use any server code - you'll need to hard-code an access token and a model URN directly into the client-side code
+    - If you don't know how to get these values, try the following:
+        - Go to https://aps-universal-test-app.autodesk.io/api/token and copy the value of the `access_token` property
+        - Go to https://aps-universal-test-app.autodesk.io/api/models and copy the `urn` of one of the models
 
-> We recommend using [Visual Studio Code](https://code.visualstudio.com) which, among other benefits,
-> provides an [integrated terminal](https://code.visualstudio.com/docs/terminal/basics) as well.
+### Running
 
-### Setup & Run
-
-- Clone this repository: `git clone https://github.com/autodesk-platform-services/aps-simple-viewer-nodejs`
-- Go to the project folder: `cd aps-simple-viewer-nodejs`
-- Install Node.js dependencies: `npm install`
-- Open the project folder in a code editor of your choice
-- Create a _.env_ file in the project folder, and populate it with the snippet below,
-replacing `<client-id>` and `<client-secret>` with your APS Client ID and Client Secret:
-
-```bash
-APS_CLIENT_ID="<client-id>"
-APS_CLIENT_SECRET="<client-secret>"
-```
-
-- Run the application, either from your code editor, or by running `npm start` in terminal
-- Open http://localhost:8080
-
-> When using [Visual Studio Code](https://code.visualstudio.com), you can run & debug
-> the application by pressing `F5`.
-
-## TIP
-If you're not interested in building the application from scratch, and you just want to try and run it locally, the complete implementation is available on GitHub:
-
-For Node.js: https://github.com/autodesk-platform-services/aps-simple-viewer-nodejs
-For .NET: https://github.com/autodesk-platform-services/aps-simple-viewer-dotnet
+- Clone this repository, and navigate to the repo folder in terminal
+- Install dependencies: `npm install`
+- Go to _src/index.jsx_, and update the `APS_ACCESS_TOKEN` and `APS_MODEL_URN` constants with your access token and model URN
+- Run `npm start` to open the application in development mode
+    - The app should automatically open in your browser (if not, navigate to [http://localhost:3000](http://localhost:3000))
+    - When you make any changes to the code, the page will automatically reload
 
 ## Troubleshooting
 
-Please contact us via https://forge.autodesk.com/en/support/get-help.
+Please contact us via https://aps.autodesk.com/en/support/get-help.
 
 ## License
 
-This sample is licensed under the terms of the [MIT License](http://opensource.org/licenses/MIT).
-Please see the [LICENSE](LICENSE) file for more details.
+This sample is licensed under the terms of the [MIT License](http://opensource.org/licenses/MIT). Please see the [LICENSE](LICENSE) file for more details.
