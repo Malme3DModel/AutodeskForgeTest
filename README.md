@@ -1,59 +1,240 @@
-# Simple Viewer (Node.js)
+# Angular Autodesk Forge Viewer
 
-![platforms](https://img.shields.io/badge/platform-windows%20%7C%20osx%20%7C%20linux-lightgray.svg)
-[![node.js](https://img.shields.io/badge/Node.js-16.16-blue.svg)](https://nodejs.org)
-[![npm](https://img.shields.io/badge/npm-8.11-blue.svg)](https://www.npmjs.com/)
-[![license](https://img.shields.io/:license-mit-green.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/theNBS/ng2-adsk-forge-viewer/actions/workflows/ci.yaml/badge.svg)](https://github.com/theNBS/ng2-adsk-forge-viewer/actions/workflows/ci.yaml)
+[![Viewer](https://img.shields.io/badge/Viewer-v7-green.svg)](https://forge.autodesk.com/)
 
-[Autodesk Platform Services](https://aps.autodesk.com) application built by following
-the [Simple Viewer](https://tutorials.autodesk.io/tutorials/simple-viewer/) tutorial
-from https://tutorials.autodesk.io.
+Angular wrapper for the [Autodesk Forge Viewer](https://developer.autodesk.com).
 
-![thumbnail](thumbnail.png)
+The wrapper was designed to meet the following requirements:
 
-## Development
+- A viewer component that can be dropped in to an angular anywhere; the component would take care of loading required Scripts and CSS from Autodesk's servers, rather than requiring these to be declared in the index.html.
+  - Ensure the viewer can be displayed and removed from the DOM via *ngIf 
+- A basic viewer extension to subscribe to common viewer events - such as Seletion changed, object tree loaded etc. and expose these events on the component
+- TypeScript typings - which are now provided via Autodesk's official forge-viewer typings.
+- A component that can be dropped in to display a document thumbnail.
 
-### Prerequisites
+## Dependencies
 
-- [APS credentials](https://forge.autodesk.com/en/docs/oauth/v2/tutorials/create-app)
-- [Node.js](https://nodejs.org) (Long Term Support version is recommended)
-- Command-line terminal such as [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/overview)
-or [bash](https://en.wikipedia.org/wiki/Bash_(Unix_shell)) (should already be available on your system)
+The library targets Angular 8 and newer.
 
-> We recommend using [Visual Studio Code](https://code.visualstudio.com) which, among other benefits,
-> provides an [integrated terminal](https://code.visualstudio.com/docs/terminal/basics) as well.
+## Using the viewer component
 
-### Setup & Run
+Follow these steps to get the viewer working in your app.
 
-- Clone this repository: `git clone https://github.com/autodesk-platform-services/aps-simple-viewer-nodejs`
-- Go to the project folder: `cd aps-simple-viewer-nodejs`
-- Install Node.js dependencies: `npm install`
-- Open the project folder in a code editor of your choice
-- Create a _.env_ file in the project folder, and populate it with the snippet below,
-replacing `<client-id>` and `<client-secret>` with your APS Client ID and Client Secret:
+A full demonstration of how to use the the library can be found on StackBlitz - https://stackblitz.com/edit/angular-forge-viewer.
 
-```bash
-APS_CLIENT_ID="<client-id>"
-APS_CLIENT_SECRET="<client-secret>"
+### Step 1
+Add the ng2-adsk-forge-viewer NPM package to your app - npm install `ng2-adsk-forge-viewer --save` or `yarn add ng2-adsk-forge-viewer`
+
+### Step 2
+Add `<adsk-forge-viewer></adsk-forge-viewer>` element to your component html
+
+component.html:
+```html
+<adsk-forge-viewer [viewerOptions]="viewerOptions3d">
+</adsk-forge-viewer>
 ```
 
-- Run the application, either from your code editor, or by running `npm start` in terminal
-- Open http://localhost:8080
+### Step 3
+There is a specific flow of logic to initialize the viewer:
 
-> When using [Visual Studio Code](https://code.visualstudio.com), you can run & debug
-> the application by pressing `F5`.
+1. Set viewerOptions
+2. The viewer is constructed, loads scripts/resources from Autodesk's servers
+2. The onViewerScriptsLoaded callback (optional) is called to indicate all viewer resources have been loaded
+3. A onViewerInitialized callback is called indicating the Viewer is ready (i.e. Autodesk.Viewing.Initializer has been called) and a model can be loaded
+4. The `onViewerInitialized` event is emitted and you can now load a model. The event arguments contain a reference to the viewer which can be used to set the documentId to load. E.g.:
+  ```typescript
+  public loadDocument(args: ViewerInitializedEvent) {
+    args.viewerComponent.DocumentId = DOCUMENT_URN_GOES_HERE;
+  }
+  ```
+  - A helper method `getDefaultViewerOptions` can be used to get the most basic viewer options
 
-## TIP
-If you're not interested in building the application from scratch, and you just want to try and run it locally, the complete implementation is available on GitHub:
+### Step 4
+When the model has been loaded the `onDocumentChanged` event is emitted. This event can be used to define the view to display (by default, the viewer will load the first 3D viewable it can find).
 
-For Node.js: https://github.com/autodesk-platform-services/aps-simple-viewer-nodejs
-For .NET: https://github.com/autodesk-platform-services/aps-simple-viewer-dotnet
+An example of displaying a 2D viewable:
 
-## Troubleshooting
+component.html:
+```html
+<adsk-forge-viewer [viewerOptions]="viewerOptions2d"
+                    (onDocumentChanged)="documentChanged($event)"></adsk-forge-viewer>
+```
 
-Please contact us via https://forge.autodesk.com/en/support/get-help.
+component.ts:
+```typescript
+public documentChanged(event: DocumentChangedEvent) {
+  const { document } = event;
 
-## License
+  if (!document.getRoot()) return;
 
-This sample is licensed under the terms of the [MIT License](http://opensource.org/licenses/MIT).
-Please see the [LICENSE](LICENSE) file for more details.
+  const viewables = document.getRoot().search({ type: 'geometry', role: '2d' });
+  if (viewables && viewables.length > 0) {
+    event.viewerComponent.loadDocumentNode(document, viewables[0]);
+  }
+}
+```
+
+## FAQ
+
+### 1. What ViewerOptions can be used to initialise the Viewer Component?
+
+The ViewerOptions interface is as follows:
+
+```typescript
+interface ViewerOptions {
+  initializerOptions: Autodesk.Viewing.InitializerOptions;
+  viewerConfig?: Autodesk.Viewing.ViewerConfig;
+  headlessViewer?: boolean;
+  showFirstViewable?: boolean;
+  enableMemoryManagement?: boolean;
+  onViewerScriptsLoaded?: () => void;
+  onViewerInitialized: (args: ViewerInitializedEvent) => void;
+}
+```
+
+`initializerOptions` allows you to provide arguments for the [Autodesk.Viewing.Initializer](https://developer.autodesk.com/en/docs/viewer/v2/reference/javascript/initializer/). One of the most important settings is how the Forge viewer is to obtain it's access token.
+
+You can provide an access key as a string, but I'd recommend using the function - the viewer will call the function you provide to obtain a new token when required - e.g. when the viewer first initialises or when the current token held by the viewer is shortly expiring.
+
+Your viewer options code would look something like this:
+
+```typescript
+this.viewerOptions3d = {
+  initializerOptions: {
+    env: 'AutodeskProduction',
+    getAccessToken: (onGetAccessToken: (token: string, expire: number) => void) => {
+      // Call back-end API endpoint to get a new token
+      // Pass new token and expire time to Viewer's callback method
+      onGetAccessToken(ACCESS_TOKEN, EXPIRE_TIME);
+    },
+    api: 'derivativeV2',
+  },
+  onViewerInitialized: (args: ViewerInitializedEvent) => {
+    // Load document in the viewer
+    args.viewerComponent.DocumentId = 'DOCUMENT_URN_HERE';
+  },
+};
+```
+
+`viewerConfig` allows you to provide additional options to Viewer3D's registered with the viewing application. Such as whether to ues the light or dark theme, any extensions to register with the viewer etc.
+
+### 2. How do I configure a 'headless' viewer?
+
+By default, the viewer component will intialise a 'full' `ViewingApplication` with toolbar, navigation controls etc. If you want a 'headless viewer' without these additional bits of UI, set the `headlessViewer` of the ViewOptions to true:
+
+```typescript
+this.viewerOptions3d = {
+  initializerOptions: {
+    env: 'AutodeskProduction',
+    getAccessToken: (onGetAccessToken: (token: string, expire: number) => void) => {
+      // Call back-end API endpoint to get a new token
+      // Pass new token and expire time to Viewer's callback method
+      onGetAccessToken(ACCESS_TOKEN, EXPIRE_TIME);
+    },
+    api: 'derivativeV2',
+  },
+  headlessViewer: true,
+  onViewerInitialized: (args: ViewerInitializedEvent) => {
+    // Load document in the viewer
+    args.viewerComponent.DocumentId = 'DOCUMENT_URN_HERE';
+  },
+};
+```
+
+### 3. My model doesn't load
+
+Some users have reported that the default viewable is not rendered and have had to resort to using the onDocumentChanged changed event to load a model in the viewer.
+
+An implementation might look like the following:
+
+app.component.html
+
+```html
+<adsk-forge-viewer [viewerOptions]="viewerOptions2d"
+                    (onDocumentChanged)="documentChanged($event)"></adsk-forge-viewer>
+```
+
+app.component.ts
+
+```typescript
+public documentChanged(event: DocumentChangedEvent) {
+  const { document } = event;
+
+  if (!document.getRoot()) return;
+
+  const viewables = document.getRoot().search({ type: 'geometry', role: '2d' });
+  if (viewables && viewables.length > 0) {
+    event.viewerComponent.loadDocumentNode(document, viewables[0]);
+  }
+}
+```
+
+## Extensions
+
+### BasicExtension
+
+The viewer component comes with a `BasicExtension` that it registers against all viewers. The basic extension captures a handful of events including:
+
+- Autodesk.Viewing.FIT_TO_VIEW_EVENT,
+- Autodesk.Viewing.FULLSCREEN_MODE_EVENT,
+- Autodesk.Viewing.GEOMETRY_LOADED_EVENT,
+- Autodesk.Viewing.HIDE_EVENT,
+- Autodesk.Viewing.ISOLATE_EVENT,
+- Autodesk.Viewing.OBJECT_TREE_CREATED_EVENT,
+- Autodesk.Viewing.OBJECT_TREE_UNAVAILABLE_EVENT,
+- Autodesk.Viewing.RESET_EVENT,
+- Autodesk.Viewing.SELECTION_CHANGED_EVENT,
+- Autodesk.Viewing.SHOW_EVENT,
+
+The viewer emits these events and should support most use cases. It's possible to obtain a reference to the BasicExtension via the viewer's `basicExtension` getter. 
+
+### Creating your own extension
+
+The `BasicExtension` is derived from an `Extension` that wraps up all the logic to register and unregister extensions with the Forge Viewer. It also contains logic to cast Forge Viewer event arguments to strongly typed TypeScript classes.
+
+Your extension should derive from `Extension` and have a few basic properties and methods.
+
+```typescript
+export class MyExtension extends Extension {
+  // Extension must have a name
+  public static extensionName: string = 'MyExtension';
+
+  public load() {
+    // Called when Forge Viewer loads your extension
+  }
+
+  public unload() {
+    // Called when Forge Viewer unloads your extension
+  }
+}
+```
+
+Example viewer options to register and load the above extension:
+
+```typescript
+this.viewerOptions3d = {
+  initializerOptions: {
+    env: 'AutodeskProduction',
+    getAccessToken: (onGetAccessToken: (token: string, expire: number) => void) => {
+      // Call back-end API endpoint to get a new token
+      // Pass new token and expire time to Viewer's callback method
+      onGetAccessToken(ACCESS_TOKEN, EXPIRE_TIME);
+    },
+    api: 'derivativeV2',
+  },
+  onViewerScriptsLoaded: () => {
+    Extension.registerExtension(MyExtension.extensionName, MyExtension);
+  },
+  onViewerInitialized: (args: ViewerInitializedEvent) => {
+    // Load document in the viewer
+    args.viewerComponent.DocumentId = 'DOCUMENT_URN_HERE';
+  },
+};
+```
+
+Most of the methods in the abstract `Extension` class are protected. So they can be overriden in derived classes if required. For example, the BasicExtension overrides the `registerExtension` method to take a callback to let the viewer component know when the Extension has been registered.
+
+## Building the component
+
+For instructions on how to develop the component (build, debug, test etc.), see (README_dev.md).
