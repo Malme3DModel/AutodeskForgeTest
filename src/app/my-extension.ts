@@ -4,10 +4,10 @@ declare const THREE: any;
 
 export class MyExtension extends Extension {
   // Extension must have a name
-  public static extensionName: string = 'MyExtension';
+  public static override extensionName: string = 'MyExtension';
 
   // Toolbar test
-  private subToolbar: Autodesk.Viewing.UI.ToolBar;
+  private subToolbar: Autodesk.Viewing.UI.ToolBar | undefined | null;
   private onToolbarCreatedBinded: any;
 
   public activate() {
