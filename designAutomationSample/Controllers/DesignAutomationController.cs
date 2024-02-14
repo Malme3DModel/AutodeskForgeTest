@@ -58,15 +58,11 @@ namespace designAutomationSample.Controllers
             _hubContext = hubContext;
         }
 
-        // **********************************
-        //
-        // Next we will add the methods here
-        //
-        // **********************************
-
+        #region Next we will add the methods here
 
         /// <summary>
         /// Names of app bundles on this project
+        /// フォルダーを見て、.ZIPファイルの一覧を返します。
         /// </summary>
         [HttpGet]
         [Route("api/appbundles")]
@@ -79,6 +75,7 @@ namespace designAutomationSample.Controllers
 
         /// <summary>
         /// Return a list of available engines
+        /// バンドルを定義するにはエンジンも必要であるため、このエンドポイントは使用可能なすべてのエンジンのリストを返します。
         /// </summary>
         [HttpGet]
         [Route("api/aps/designautomation/engines")]
@@ -101,6 +98,7 @@ namespace designAutomationSample.Controllers
 
         /// <summary>
         /// Define a new appbundle
+        /// ここで、実際に新しい AppBundle を定義します。
         /// </summary>
         [HttpPost]
         [Route("api/aps/designautomation/appbundles")]
@@ -187,321 +185,9 @@ namespace designAutomationSample.Controllers
             return Ok(new { AppBundle = qualifiedAppBundleId, Version = newAppVersion.Version });
         }
 
-        /// <summary>
-        /// Helps identify the engine
-        /// </summary>
-        private dynamic EngineAttributes(string engine)
-        {
-            if (engine.Contains("3dsMax")) return new { commandLine = "$(engine.path)\\3dsmaxbatch.exe -sceneFile \"$(args[inputFile].path)\" $(settings[script].path)", extension = "max", script = "da = dotNetClass(\"Autodesk.Forge.Sample.DesignAutomation.Max.RuntimeExecute\")\nda.ModifyWindowWidthHeight()\n" };
-            if (engine.Contains("AutoCAD")) return new { commandLine = "$(engine.path)\\accoreconsole.exe /i \"$(args[inputFile].path)\" /al \"$(appbundles[{0}].path)\" /s $(settings[script].path)", extension = "dwg", script = "UpdateParam\n" };
-            if (engine.Contains("Inventor")) return new { commandLine = "$(engine.path)\\inventorcoreconsole.exe /i \"$(args[inputFile].path)\" /al \"$(appbundles[{0}].path)\"", extension = "ipt", script = string.Empty };
-            if (engine.Contains("Revit")) return new { commandLine = "$(engine.path)\\revitcoreconsole.exe /i \"$(args[inputFile].path)\" /al \"$(appbundles[{0}].path)\"", extension = "rvt", script = string.Empty };
-            throw new Exception("Invalid engine");
-        }
-
-        /// <summary>
-        /// Define a new activity
-        /// </summary>
-        [HttpPost]
-        [Route("api/aps/designautomation/activities")]
-        public async Task<IActionResult> CreateActivity([FromBody] JObject activitySpecs)
-        {
-            // basic input validation
-            string zipFileName = activitySpecs["zipFileName"].Value<string>();
-            string engineName = activitySpecs["engine"].Value<string>();
-
-            // standard name for this sample
-            string appBundleName = zipFileName + "AppBundle";
-            string activityName = zipFileName + "Activity";
-
-            // 
-            Page<string> activities = await _designAutomation.GetActivitiesAsync();
-            string qualifiedActivityId = string.Format("{0}.{1}+{2}", NickName, activityName, Alias);
-            if (!activities.Data.Contains(qualifiedActivityId))
-            {
-                // define the activity
-                // ToDo: parametrize for different engines...
-                dynamic engineAttributes = EngineAttributes(engineName);
-                string commandLine = string.Format(engineAttributes.commandLine, appBundleName);
-                Activity activitySpec = new Activity()
-                {
-                    Id = activityName,
-                    Appbundles = new List<string>() { string.Format("{0}.{1}+{2}", NickName, appBundleName, Alias) },
-                    CommandLine = new List<string>() { commandLine },
-                    Engine = engineName,
-                    Parameters = new Dictionary<string, Parameter>()
-                    {
-                        { "inputFile", new Parameter() { Description = "input file", LocalName = "$(inputFile)", Ondemand = false, Required = true, Verb = Verb.Get, Zip = false } },
-                        { "inputJson", new Parameter() { Description = "input json", LocalName = "params.json", Ondemand = false, Required = false, Verb = Verb.Get, Zip = false } },
-                        { "outputFile", new Parameter() { Description = "output file", LocalName = "outputFile." + engineAttributes.extension, Ondemand = false, Required = true, Verb = Verb.Put, Zip = false } }
-                     },
-                    Settings = new Dictionary<string, ISetting>()
-                    {
-                        { "script", new StringSetting(){ Value = engineAttributes.script } }
-                     }
-                };
-                Activity newActivity = await _designAutomation.CreateActivityAsync(activitySpec);
-
-                // specify the alias for this Activity
-                Alias aliasSpec = new Alias() { Id = Alias, Version = 1 };
-                Alias newAlias = await _designAutomation.CreateActivityAliasAsync(activityName, aliasSpec);
-
-                return Ok(new { Activity = qualifiedActivityId });
-            }
-
-            // as this activity points to a AppBundle "dev" alias (which points to the last version of the bundle),
-            // there is no need to update it (for this sample), but this may be extended for different contexts
-            return Ok(new { Activity = "Activity already defined" });
-        }
-
-        /// <summary>
-        /// Get all Activities defined for this account
-        /// </summary>
-        [HttpGet]
-        [Route("api/aps/designautomation/activities")]
-        public async Task<List<string>> GetDefinedActivities()
-        {
-            // filter list of 
-            Page<string> activities = await _designAutomation.GetActivitiesAsync();
-            List<string> definedActivities = new List<string>();
-            foreach (string activity in activities.Data)
-                if (activity.StartsWith(NickName) && activity.IndexOf("$LATEST") == -1)
-                    definedActivities.Add(activity.Replace(NickName + ".", String.Empty));
-
-            return definedActivities;
-        }
-             
-
-        static void onUploadProgress(float progress, TimeSpan elapsed, List<UploadItemDesc> objects)
-        {
-            Console.WriteLine("progress: {0} elapsed: {1} objects: {2}", progress, elapsed, string.Join(", ", objects));
-        }
-        public static async Task<string?> GetObjectId(string bucketKey, string objectKey, dynamic oauth, string fileSavePath)
-        {
-            try
-            {
-                ObjectsApi objectsApi = new ObjectsApi();
-                objectsApi.Configuration.AccessToken = oauth.access_token;
-                List<UploadItemDesc> uploadRes = await objectsApi.uploadResources(bucketKey,
-                    new List<UploadItemDesc> {
-                        new UploadItemDesc(objectKey, await System.IO.File.ReadAllBytesAsync(fileSavePath))
-                    },
-                    null,
-                    onUploadProgress,
-                    null);
-                Console.WriteLine("**** Upload object(s) response(s):");
-                DynamicDictionary objValues = uploadRes[0].completed;
-                objValues.Dictionary.TryGetValue("objectId", out var id);           
-                                
-                return id?.ToString();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Exception when preparing input url:{ex.Message}");
-                throw;
-            }
-
-        }
-
-
-        /// <summary>
-        /// Start a new workitem
-        /// </summary>
-        [HttpPost]
-        [Route("api/aps/designautomation/workitems")]
-        public async Task<IActionResult> StartWorkitem([FromForm] StartWorkitemInput input)
-        {
-            // basic input validation
-            JObject workItemData = JObject.Parse(input.data);
-            string widthParam = workItemData["width"].Value<string>();
-            string heigthParam = workItemData["height"].Value<string>();
-            string activityName = string.Format("{0}.{1}", NickName, workItemData["activityName"].Value<string>());
-            string browserConnectionId = workItemData["browserConnectionId"].Value<string>();
-
-            // save the file on the server
-            var fileSavePath = Path.Combine(_env.ContentRootPath, Path.GetFileName(input.inputFile.FileName));
-            using (var stream = new FileStream(fileSavePath, FileMode.Create)) await input.inputFile.CopyToAsync(stream);
-
-            // OAuth token
-            dynamic oauth = await OAuthController.GetInternalAsync();
-
-            // upload file to OSS Bucket
-            // 1. ensure bucket existis
-            string bucketKey = NickName.ToLower() + "-designautomation";
-            BucketsApi buckets = new BucketsApi();
-            buckets.Configuration.AccessToken = oauth.access_token;
-            try
-            {
-                PostBucketsPayload bucketPayload = new PostBucketsPayload(bucketKey, null, PostBucketsPayload.PolicyKeyEnum.Transient);
-                await buckets.CreateBucketAsync(bucketPayload, "US");
-            }
-            catch { }; // in case bucket already exists
-                       // 2. upload inputFile
-            string inputFileNameOSS = string.Format("{0}_input_{1}", DateTime.Now.ToString("yyyyMMddhhmmss"), Path.GetFileName(input.inputFile.FileName));// avoid overriding
-            // prepare workitem arguments
-            // 1. input file
-            XrefTreeArgument inputFileArgument = new XrefTreeArgument()
-            {
-                Url = await GetObjectId(bucketKey, inputFileNameOSS, oauth, fileSavePath),
-                Headers = new Dictionary<string, string>(){
-                    { "Authorization", "Bearer " + oauth.access_token} }
-            };
-
-            // 2. input json
-            dynamic inputJson = new JObject();
-            inputJson.Width = widthParam;
-            inputJson.Height = heigthParam;
-            XrefTreeArgument inputJsonArgument = new XrefTreeArgument()
-            {
-                Url = "data:application/json, " + ((JObject)inputJson).ToString(Formatting.None).Replace("\"", "'")
-            };
-            // 3. output file
-            string outputFileNameOSS = string.Format("{0}_output_{1}", DateTime.Now.ToString("yyyyMMddhhmmss"), Path.GetFileName(input.inputFile.FileName)); // avoid overriding            
-            XrefTreeArgument outputFileArgument = new XrefTreeArgument()
-            {
-                Url = await GetObjectId(bucketKey, outputFileNameOSS, oauth, fileSavePath),
-                Headers = new Dictionary<string, string>()
-                {
-                    { "Authorization", "Bearer " + oauth.access_token}
-                },
-                Verb = Verb.Put
-            };
-
-            if (System.IO.File.Exists(fileSavePath))
-            {
-                System.IO.File.Delete(fileSavePath);
-            }
-
-            // prepare & submit workitem            
-            WorkItem workItemSpec = new WorkItem()
-            {
-                ActivityId = activityName,
-                Arguments = new Dictionary<string, IArgument>()
-                {
-                    { "inputFile", inputFileArgument },
-                    { "inputJson",  inputJsonArgument },
-                    { "outputFile", outputFileArgument }
-                   
-                }
-            };
-            WorkItemStatus workItemStatus = await _designAutomation.CreateWorkItemAsync(workItemSpec);
-            MonitorWorkitem(oauth, browserConnectionId, workItemStatus, outputFileNameOSS);
-            return Ok(new { WorkItemId = workItemStatus.Id });
-        }
-
-        private async Task MonitorWorkitem(dynamic oauth, string browserConnectionId, WorkItemStatus workItemStatus, string outputFileNameOSS)
-        {
-            try
-            {
-                
-                while (!workItemStatus.Status.IsDone())
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(2));
-                    workItemStatus = await _designAutomation.GetWorkitemStatusAsync(workItemStatus.Id);
-                    await _hubContext.Clients.Client(browserConnectionId).SendAsync("onComplete", workItemStatus.ToString());
-                }
-                using (var httpClient = new HttpClient())
-                {
-                    byte[] bs = await httpClient.GetByteArrayAsync(workItemStatus.ReportUrl);
-                    string report = System.Text.Encoding.Default.GetString(bs);
-                    await _hubContext.Clients.Client(browserConnectionId).SendAsync("onComplete", report);
-                }
-
-                if (workItemStatus.Status == Status.Success)
-                {
-                    ObjectsApi objectsApi = new ObjectsApi();
-                    objectsApi.Configuration.AccessToken = oauth.access_token;
-
-                    ApiResponse<dynamic> res = await objectsApi.getS3DownloadURLAsyncWithHttpInfo(
-                                                NickName.ToLower() + "-designautomation",
-                                                outputFileNameOSS, new Dictionary<string, object> {
-                                                { "minutesExpiration", 15.0 },
-                                                { "useCdn", true }
-                                                });
-                    await _hubContext.Clients.Client(browserConnectionId).SendAsync("downloadResult", (string)(res.Data.url));
-                    Console.WriteLine("Congrats!");
-                }
-
-            }
-            catch (Exception ex)
-            {
-                await _hubContext.Clients.Client(browserConnectionId).SendAsync("onComplete", ex.Message);
-                Console.WriteLine(ex.Message);
-            }      
-        }
-
-
-
-        /// <summary>
-        /// Callback from Design Automation Workitem (onProgress or onComplete)
-        /// </summary>
-        [HttpPost]
-        [Route("/api/aps/callback/designautomation")]
-        public async Task<IActionResult> OnCallback(string id, string outputFileName, [FromBody] dynamic body)
-        {
-            try
-            {
-                // your webhook should return immediately! we can use Hangfire to schedule a job
-                JObject bodyJson = JObject.Parse((string)body.ToString());
-                await _hubContext.Clients.Client(id).SendAsync("onComplete", bodyJson.ToString());
-
-                using (var httpClient = new HttpClient())
-                {
-                    byte[] bs = await httpClient.GetByteArrayAsync(bodyJson["reportUrl"]?.Value<string>());
-                    string report = System.Text.Encoding.Default.GetString(bs);
-                    await _hubContext.Clients.Client(id).SendAsync("onComplete", report);
-                }
-
-                // OAuth token
-                dynamic oauth = await OAuthController.GetInternalAsync();
-
-                ObjectsApi objectsApi = new ObjectsApi();
-                objectsApi.Configuration.AccessToken = oauth.access_token;              
-
-                ApiResponse<dynamic> res = await objectsApi.getS3DownloadURLAsyncWithHttpInfo(
-                                            NickName.ToLower()+"-designautomation",
-                                            outputFileName, new Dictionary<string, object> {
-                                            { "minutesExpiration", 15.0 },
-                                            { "useCdn", true }
-                                            });
-                await _hubContext.Clients.Client(id).SendAsync("downloadResult", (string)(res.Data.url));
-                Console.WriteLine("Congrats!");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-
-            // ALWAYS return ok (200)
-            return Ok();
-        }
-
-        /// <summary>
-        /// Clear the accounts (for debugging purposes)
-        /// </summary>
-        [HttpDelete]
-        [Route("api/aps/designautomation/account")]
-        public async Task<IActionResult> ClearAccount()
-        {
-            // clear account
-            await _designAutomation.DeleteForgeAppAsync("me");
-            return Ok();
-        }
-
-
-
-        /// <summary>
-        /// Input for StartWorkitem
-        /// </summary>
-        public class StartWorkitemInput
-        {
-            public IFormFile inputFile { get; set; }
-            public string data { get; set; }
-        }
-
-
-
+        #endregion
     }
+
     /// <summary>
     /// Class uses for SignalR
     /// </summary>
@@ -509,5 +195,5 @@ namespace designAutomationSample.Controllers
     {
         public string GetConnectionId() { return Context.ConnectionId; }
     }
-}
 
+}

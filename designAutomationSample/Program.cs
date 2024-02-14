@@ -10,11 +10,9 @@ namespace designAutomationSample
         {
             CreateHostBuilder(args).ConfigureAppConfiguration(builder =>
             {
-                //required by Design Automation SDK to generated 2-Legged OAuth
-                //and consequently run API requests.
                 builder.AddJsonFile($"appsettings.user.json", optional: true);
                 builder.AddEnvironmentVariables();
-                
+
             }).ConfigureServices((hostContext, services) =>
             {
                 services.AddDesignAutomation(hostContext.Configuration);
@@ -26,3 +24,4 @@ namespace designAutomationSample
                 .UseStartup<Startup>();
     }
 }
+

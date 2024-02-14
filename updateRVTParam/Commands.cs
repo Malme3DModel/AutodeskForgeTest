@@ -51,7 +51,7 @@ namespace Autodesk.Forge.Sample.DesignAutomation.Revit
                     SetElementParameter(FamSym, BuiltInParameter.WINDOW_WIDTH, inputParameters.Width);
                 }
 
-                //To save all the changes commit the transaction 
+                //To save all the changes commit the transaction
                 trans.Commit();
             }
 
