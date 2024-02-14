@@ -1,0 +1,42 @@
+[
+  {
+    "StatusCode": 200,
+    "Headers": {
+      "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+      "X-Amz-Cf-Pop": "HIO52-P1",
+      "x-amzn-Remapped-Content-Length": "60"
+    },
+    "Content": {
+      "Body": {
+        "backendLimits": {
+          "AutoCAD": {
+            "limitProcessingTimeSec": 300
+          }
+        }
+      },
+      "Headers": {
+        "Content-Type": "application/json"
+      }
+    },
+    "Request": {
+      "Method": "PUT",
+      "RequestUri": "https://developer.api.autodesk.com/da/us-east/v3/servicelimits/me",
+      "Headers": {
+        "Accept": "application/json",
+        "Authorization": "***"
+      },
+      "Content": {
+        "Body": {
+          "backendLimits": {
+            "AutoCAD": {
+              "limitProcessingTimeSec": 300
+            }
+          }
+        },
+        "Headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    }
+  }
+]

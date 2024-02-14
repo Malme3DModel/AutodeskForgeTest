@@ -1,0 +1,54 @@
+[
+  {
+    "StatusCode": 200,
+    "Headers": {
+      "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+      "X-Amz-Cf-Pop": "HIO52-P1",
+      "x-amzn-Remapped-Content-Length": "565"
+    },
+    "Content": {
+      "Body": {
+        "frontendLimits": {
+          "limitPayloadSizeInKB": 16,
+          "limitVersions": 100,
+          "limitAliases": 100,
+          "limitPublicAliases": 0,
+          "limitAppUploadSizeInMB": 100
+        },
+        "backendLimits": {
+          "3dsMax": {
+            "limitProcessingTimeSec": 3600,
+            "limitTotalUncompressedAppsSizeInMB": 5000
+          },
+          "AutoCAD": {
+            "limitProcessingTimeSec": 100,
+            "limitTotalUncompressedAppsSizeInMB": 500
+          },
+          "Inventor": {
+            "limitProcessingTimeSec": 900,
+            "limitTotalUncompressedAppsSizeInMB": 500
+          },
+          "Revit": {
+            "limitProcessingTimeSec": 10800,
+            "limitTotalUncompressedAppsSizeInMB": 5000
+          },
+          "Test": {
+            "limitProcessingTimeSec": 300,
+            "limitTotalUncompressedAppsSizeInMB": 500
+          }
+        }
+      },
+      "Headers": {
+        "Content-Type": "application/json"
+      }
+    },
+    "Request": {
+      "Method": "GET",
+      "RequestUri": "https://developer.api.autodesk.com/da/us-east/v3/servicelimits/me",
+      "Headers": {
+        "Accept": "application/json",
+        "Authorization": "***"
+      }
+    }
+  }
+]
