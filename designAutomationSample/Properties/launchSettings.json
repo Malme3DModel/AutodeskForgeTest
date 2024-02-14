@@ -26,6 +26,7 @@
             }
         },
         "designAutomationSample": {
+            "commandName": "Project",
             "environmentVariables": {
                 "ASPNETCORE_URLS": "http://localhost:8080",
                 "APS_CLIENT_ID": "Ej7q07CpEt8UCqRreWLbRmBwUAjOuNqi",

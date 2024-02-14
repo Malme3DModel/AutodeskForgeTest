@@ -186,6 +186,98 @@ namespace designAutomationSample.Controllers
         }
 
         #endregion
+
+        #region 定義: アクティビティ
+        /// <summary>
+        /// Helps identify the engine
+        /// アクティビティを定義するには、実行可能ファイルと既定のファイル拡張子が必要です。このヘルパー関数は、(エンジン名から)それを提供します。
+        /// </summary>
+        private dynamic EngineAttributes(string engine)
+        {
+            if (engine.Contains("3dsMax")) return new { commandLine = "$(engine.path)\\3dsmaxbatch.exe -sceneFile \"$(args[inputFile].path)\" $(settings[script].path)", extension = "max", script = "da = dotNetClass(\"Autodesk.Forge.Sample.DesignAutomation.Max.RuntimeExecute\")\nda.ModifyWindowWidthHeight()\n" };
+            if (engine.Contains("AutoCAD")) return new { commandLine = "$(engine.path)\\accoreconsole.exe /i \"$(args[inputFile].path)\" /al \"$(appbundles[{0}].path)\" /s $(settings[script].path)", extension = "dwg", script = "UpdateParam\n" };
+            if (engine.Contains("Inventor")) return new { commandLine = "$(engine.path)\\inventorcoreconsole.exe /i \"$(args[inputFile].path)\" /al \"$(appbundles[{0}].path)\"", extension = "ipt", script = string.Empty };
+            if (engine.Contains("Revit")) return new { commandLine = "$(engine.path)\\revitcoreconsole.exe /i \"$(args[inputFile].path)\" /al \"$(appbundles[{0}].path)\"", extension = "rvt", script = string.Empty };
+            throw new Exception("Invalid engine");
+        }
+
+        /// <summary>
+        /// Define a new activity
+        /// 入力ファイル、入力データ (JSON)、および出力ファイルを使用して新しいアクティビティを定義します。
+        /// </summary>
+        [HttpPost]
+        [Route("api/aps/designautomation/activities")]
+        public async Task<IActionResult> CreateActivity([FromBody] JObject activitySpecs)
+        {
+            // basic input validation
+            string zipFileName = activitySpecs["zipFileName"].Value<string>();
+            string engineName = activitySpecs["engine"].Value<string>();
+
+            // standard name for this sample
+            string appBundleName = zipFileName + "AppBundle";
+            string activityName = zipFileName + "Activity";
+
+            //
+            Page<string> activities = await _designAutomation.GetActivitiesAsync();
+            string qualifiedActivityId = string.Format("{0}.{1}+{2}", NickName, activityName, Alias);
+            if (!activities.Data.Contains(qualifiedActivityId))
+            {
+                // define the activity
+                // ToDo: parametrize for different engines...
+                dynamic engineAttributes = EngineAttributes(engineName);
+                string commandLine = string.Format(engineAttributes.commandLine, appBundleName);
+                Activity activitySpec = new Activity()
+                {
+                    Id = activityName,
+                    Appbundles = new List<string>() { string.Format("{0}.{1}+{2}", NickName, appBundleName, Alias) },
+                    CommandLine = new List<string>() { commandLine },
+                    Engine = engineName,
+                    Parameters = new Dictionary<string, Parameter>()
+            {
+                { "inputFile", new Parameter() { Description = "input file", LocalName = "$(inputFile)", Ondemand = false, Required = true, Verb = Verb.Get, Zip = false } },
+                { "inputJson", new Parameter() { Description = "input json", LocalName = "params.json", Ondemand = false, Required = false, Verb = Verb.Get, Zip = false } },
+                { "outputFile", new Parameter() { Description = "output file", LocalName = "outputFile." + engineAttributes.extension, Ondemand = false, Required = true, Verb = Verb.Put, Zip = false } }
+            },
+                    Settings = new Dictionary<string, ISetting>()
+            {
+                { "script", new StringSetting(){ Value = engineAttributes.script } }
+            }
+                };
+                Activity newActivity = await _designAutomation.CreateActivityAsync(activitySpec);
+
+                // specify the alias for this Activity
+                Alias aliasSpec = new Alias() { Id = Alias, Version = 1 };
+                Alias newAlias = await _designAutomation.CreateActivityAliasAsync(activityName, aliasSpec);
+
+                return Ok(new { Activity = qualifiedActivityId });
+            }
+
+            // as this activity points to a AppBundle "dev" alias (which points to the last version of the bundle),
+            // there is no need to update it (for this sample), but this may be extended for different contexts
+            return Ok(new { Activity = "Activity already defined" });
+        }
+
+        /// <summary>
+        /// Get all Activities defined for this account
+        /// また、定義されたすべてのアクティビティを返すメソッドも必要です。これは、ユーザーが定義したもののみを返すことに注意してください (APS クライアント ID をニックネームとして使用し、プレフィックスとして表示されます)。
+        /// </summary>
+        [HttpGet]
+        [Route("api/aps/designautomation/activities")]
+        public async Task<List<string>> GetDefinedActivities()
+        {
+            // filter list of
+            Page<string> activities = await _designAutomation.GetActivitiesAsync();
+            List<string> definedActivities = new List<string>();
+            foreach (string activity in activities.Data)
+                if (activity.StartsWith(NickName) && activity.IndexOf("$LATEST") == -1)
+                    definedActivities.Add(activity.Replace(NickName + ".", String.Empty));
+
+            return definedActivities;
+        }
+
+
+
+        #endregion
     }
 
     /// <summary>
