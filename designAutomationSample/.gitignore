@@ -1,2 +1,3 @@
 wwwroot/bundles/*
+!wwwroot/bundles/.gitkeep
 
