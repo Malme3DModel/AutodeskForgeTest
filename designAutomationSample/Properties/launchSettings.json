@@ -15,7 +15,10 @@
             "launchBrowser": true,
             "applicationUrl": "http://localhost:5161",
             "environmentVariables": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:8080",
+                "APS_CLIENT_ID": "Ej7q07CpEt8UCqRreWLbRmBwUAjOuNqi",
+                "APS_CLIENT_SECRET": "XGNdOd79kZemgf3n"
             }
         },
         "IIS Express": {
@@ -23,14 +26,6 @@
             "launchBrowser": true,
             "environmentVariables": {
                 "ASPNETCORE_ENVIRONMENT": "Development"
-            }
-        },
-        "designAutomationSample": {
-            "commandName": "Project",
-            "environmentVariables": {
-                "ASPNETCORE_URLS": "http://localhost:8080",
-                "APS_CLIENT_ID": "Ej7q07CpEt8UCqRreWLbRmBwUAjOuNqi",
-                "APS_CLIENT_SECRET": "XGNdOd79kZemgf3n"
             }
         }
     }
