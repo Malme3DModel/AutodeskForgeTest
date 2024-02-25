@@ -31,11 +31,14 @@ function initializeViewerRuntime(
     return runtime.ready;
 }
 
+
 // Autodesk Platform Services ビューア コンポーネントのラッパー。
 interface propT {
     runtime: Autodesk.Viewing.InitializerOptions; // Viewer runtime initialization options.
     urn: string;                    // URN of model to be loaded.
     selectedIds: number[];
+    onCameraChange: any;
+    onSelectionChange: any;
 }
 
 export default function Viewer(props: propT) {
@@ -54,8 +57,8 @@ export default function Viewer(props: propT) {
                 .then(_ => {
                     viewer = new Autodesk.Viewing.GuiViewer3D(container!);
                     viewer.start();
-                    // viewer.addEventListener(Autodesk.Viewing.CAMERA_CHANGE_EVENT, onViewerCameraChange);
-                    // viewer.addEventListener(Autodesk.Viewing.SELECTION_CHANGED_EVENT, onViewerSelectionChange);
+                    viewer.addEventListener(Autodesk.Viewing.CAMERA_CHANGE_EVENT, onViewerCameraChange);
+                    viewer.addEventListener(Autodesk.Viewing.SELECTION_CHANGED_EVENT, onViewerSelectionChange);
                     updateViewerState({});
                 })
                 .catch(err => console.error(err));
@@ -64,8 +67,8 @@ export default function Viewer(props: propT) {
         return () => {
             // componentWillUnmount
             if (viewer) {
-                viewer.removeEventListener(Autodesk.Viewing.CAMERA_CHANGE_EVENT, this.onViewerCameraChange);
-                viewer.removeEventListener(Autodesk.Viewing.SELECTION_CHANGED_EVENT, this.onViewerSelectionChange);
+                viewer.removeEventListener(Autodesk.Viewing.CAMERA_CHANGE_EVENT, onViewerCameraChange);
+                viewer.removeEventListener(Autodesk.Viewing.SELECTION_CHANGED_EVENT, onViewerSelectionChange);
                 viewer.finish();
                 viewer = null;
             }
@@ -89,6 +92,17 @@ export default function Viewer(props: propT) {
         }
     }
 
+    const onViewerCameraChange = () => {
+        if (props.onCameraChange) {
+          props.onCameraChange({ viewer: viewer, camera: viewer!.getCamera() });
+        }
+      }
+
+    const onViewerSelectionChange = () => {
+        if (props.onSelectionChange) {
+          props.onSelectionChange({ viewer: viewer, ids: viewer!.getSelection() });
+        }
+    }
 
     return ( 
         <div ref={ ref => container = ref }> </div>
