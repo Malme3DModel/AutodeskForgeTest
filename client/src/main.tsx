@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './components/App'
+import ForgeTree from './components/ForgeTree'
 
 
 const APS_ACCESS_TOKEN = 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjY0RE9XMnJoOE9tbjNpdk1NU0xlNGQ2VHEwUV9SUzI1NiIsInBpLmF0bSI6Ijd6M2gifQ.eyJzY29wZSI6WyJ2aWV3YWJsZXM6cmVhZCJdLCJjbGllbnRfaWQiOiJFa2dpRTRiSlZYcnp6QWVBdzliR2N3UDB3T1VVa3VHViIsImF1ZCI6Imh0dHBzOi8vYXV0b2Rlc2suY29tL2F1ZC9hand0ZXhwNjAiLCJqdGkiOiJ5OVpzVWJmdko3S1VvT2JFTGxXTkdDaEdTRzlRQnhRM1RtdThrOFl2YnRyMHEwZjF0VnVYMFdDd0NCQ0xoNGkzIiwiZXhwIjoxNzA4NjU2NzE2fQ.jdCRxRwCVd3wjhSXvHY30Dy9jRTBnCuRoO88j3H08_3HYZRqhbtoHBoX1t1YSdRZx7CgCKyAIv6RR5dUhHlKZqkzHrv30zsKdH4xSfItaH6NNGz_JxV30Uv3D_e2MNggZpiFjuCqgqB9m6Yu8TgrHeA2afmGX_0Jo_FcC4UsOkIWGJPPOUUmINwUTVfX0G3FtIHdzqmsGWK1_wAyAixfqs3ubKpohaUwvOFfINK_gxJlpi5DPzPZ_XReO2M2NR-MV32tQLP5otgN7qxSrseiMXr9is1BFTjbLSpymgMR6c0taCcd6nGh3BDbTdGEtXQSACD_LFvZ-61p5zaczYOF7A'; // Specify your access token
@@ -17,6 +18,7 @@ if (!APS_ACCESS_TOKEN || !APS_MODEL_URN) {
 } else {
     root.render(
       <React.StrictMode>
+        <ForgeTree />
         <App token={APS_ACCESS_TOKEN} urn={APS_MODEL_URN} />
       </React.StrictMode>,
     );
